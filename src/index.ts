@@ -1,7 +1,7 @@
 export { OcpiHubClient } from "./client.js";
 export type { OcpiHubClientOptions } from "./client.js";
 
-export { OcpiError, OcpiModuleNotAvailableError } from "./errors.js";
+export { OcpiError } from "./errors.js";
 
 export { OCPI_STATUS } from "./types.js";
 export type {
@@ -15,8 +15,6 @@ export type {
   OcpiCredentialsPayload,
   OcpiCredentialsData,
 } from "./types.js";
-
-export type { OcpiChargingProfile } from "./roadmap-types.js";
 
 export type {
   OcpiConnector,
@@ -78,3 +76,13 @@ export type {
   OcpiInvoiceReconciliationInput,
   OcpiInvoiceReconciliation,
 } from "./invoiceReconciliation.js";
+
+export type {
+  OcpiChargingProfilePeriod,
+  OcpiChargingProfile,
+  OcpiChargingProfileAction,
+  OcpiChargingProfileAckResult,
+  OcpiChargingProfileAck,
+  OcpiChargingProfileFinalResult,
+  OcpiChargingProfileRequest,
+} from "./chargingProfiles.js";

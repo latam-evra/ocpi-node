@@ -1,4 +1,4 @@
-import { OcpiError, OcpiModuleNotAvailableError } from "./errors.js";
+import { OcpiError } from "./errors.js";
 import { OCPI_STATUS } from "./types.js";
 import type {
   OcpiCredentialsData,
@@ -7,7 +7,6 @@ import type {
   OcpiVersionDetails,
   OcpiVersionEntry,
 } from "./types.js";
-import type { OcpiChargingProfile } from "./roadmap-types.js";
 import type {
   OcpiLocation,
   OcpiLocationInput,
@@ -30,6 +29,11 @@ import type {
   OcpiInvoiceReconciliation,
   OcpiInvoiceReconciliationInput,
 } from "./invoiceReconciliation.js";
+import type {
+  OcpiChargingProfile,
+  OcpiChargingProfileAck,
+  OcpiChargingProfileRequest,
+} from "./chargingProfiles.js";
 
 export interface OcpiHubClientOptions {
   /**
@@ -49,9 +53,8 @@ export interface OcpiHubClientOptions {
  * LATAM EV Roaming Alliance.
  *
  * Implementa de verdad Credentials & Registration, Locations, Tariffs, Hub
- * Client Info, Sessions, CDRs, Tokens & Authorisation, Commands e Invoice
- * Reconciliation. Solo Charging Profiles queda como stub tipado que lanza
- * `OcpiModuleNotAvailableError` — no está en el roadmap del Hub.
+ * Client Info, Sessions, CDRs, Tokens & Authorisation, Commands, Invoice
+ * Reconciliation y Charging Profiles.
  */
 export class OcpiHubClient {
   private readonly baseUrl: string;
@@ -589,12 +592,99 @@ export class OcpiHubClient {
     return res.data;
   }
 
-  /** Roadmap: módulo Charging Profiles. */
+  // -------------------------------------------------------------------
+  // Charging Profiles (implementado en el Hub) — no es CRUD simétrico: 3
+  // métodos tipados para pedir una acción sobre una sesión existente más
+  // getChargingProfile(), cuyo GET vive en
+  // /chargingprofiles/callback/{id} (no en /chargingprofiles/{session_id}).
+  // `response_url` no lo genera el SDK: el llamador (un eMSP externo)
+  // debe pasar su propio callback público, se forwardea tal cual.
+  // -------------------------------------------------------------------
+
+  async getActiveChargingProfile(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    sessionId: string,
+    responseUrl: string,
+  ): Promise<OcpiChargingProfileAck> {
+    return this.requestChargingProfile(
+      tokenB,
+      "GET_ACTIVE_CHARGING_PROFILE",
+      countryCode,
+      partyId,
+      sessionId,
+      { response_url: responseUrl },
+    );
+  }
+
   async setChargingProfile(
-    _sessionId: string,
-    _profile: OcpiChargingProfile,
-  ): Promise<void> {
-    throw new OcpiModuleNotAvailableError("Commands & Charging Profiles");
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    sessionId: string,
+    responseUrl: string,
+    chargingProfile: OcpiChargingProfile,
+  ): Promise<OcpiChargingProfileAck> {
+    return this.requestChargingProfile(
+      tokenB,
+      "PUT_CHARGING_PROFILE",
+      countryCode,
+      partyId,
+      sessionId,
+      { response_url: responseUrl, charging_profile: chargingProfile },
+    );
+  }
+
+  async deleteChargingProfile(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    sessionId: string,
+    responseUrl: string,
+  ): Promise<OcpiChargingProfileAck> {
+    return this.requestChargingProfile(
+      tokenB,
+      "DELETE_CHARGING_PROFILE",
+      countryCode,
+      partyId,
+      sessionId,
+      { response_url: responseUrl },
+    );
+  }
+
+  private async requestChargingProfile(
+    tokenB: string,
+    action: string,
+    countryCode: string,
+    partyId: string,
+    sessionId: string,
+    body: unknown,
+  ): Promise<OcpiChargingProfileAck> {
+    const res = await this.request<OcpiChargingProfileAck>(
+      `/chargingprofiles/${countryCode}/${partyId}/${sessionId}/${action}`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Token ${tokenB}`,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    return res.data;
+  }
+
+  /** GET /chargingprofiles/callback/{id} — estado actual de la solicitud. */
+  async getChargingProfile(
+    tokenB: string,
+    chargingProfileId: string,
+  ): Promise<OcpiChargingProfileRequest> {
+    const res = await this.request<OcpiChargingProfileRequest>(
+      `/chargingprofiles/callback/${chargingProfileId}`,
+      { method: "GET", headers: { authorization: `Token ${tokenB}` } },
+    );
+    return res.data;
   }
 
   // -------------------------------------------------------------------

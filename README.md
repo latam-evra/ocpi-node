@@ -137,38 +137,26 @@ try {
 }
 ```
 
-## Módulos disponibles vs. roadmap
+## Módulos disponibles
 
-| Módulo | Estado | Método del SDK |
-| --- | --- | --- |
-| Credentials & Registration | **Disponible** | `getVersions()`, `getDetails()`, `registerCredentials()`, `renewCredentials()`, `terminateCredentials()` |
-| Locations | **Disponible** | `getLocations()`, `getLocation()`, `putLocation()`, `patchLocation()` |
-| Tariffs | **Disponible** | `getTariffs()`, `getTariff()`, `putTariff()`, `deleteTariff()` |
-| Hub Client Info | **Disponible** | `listHubClientInfo()`, `getHubClientInfo()` |
-| Sessions | Roadmap | `getActiveSession(sessionId)` |
-| CDRs | Roadmap | `getCdr(cdrId)` |
-| Tokens & Authorisation | Roadmap | `authorizeToken(tokenUid)` |
-| Commands | Roadmap | `sendCommand(command, payload)` |
-| Charging Profiles | Roadmap | `setChargingProfile(sessionId, profile)` |
-| Invoice Reconciliation | Roadmap | `getInvoiceReconciliation(cdrId)` |
+Todos los módulos del roadmap OCPI 2.3.0 del Hub están implementados de
+verdad, tanto server-side como en este SDK.
 
-Los métodos marcados como roadmap ya tienen **tipado TypeScript completo**
-(ver `src/roadmap-types.ts`) para los payloads esperados, pero lanzan un
-`OcpiModuleNotAvailableError` en tiempo de ejecución hasta que el módulo
-correspondiente esté implementado en el Hub:
-
-```ts
-try {
-  await client.getLocations();
-} catch (err) {
-  // OcpiModuleNotAvailableError:
-  // "El módulo Locations aún no está disponible en el Hub — ver roadmap
-  //  en docs/Roaming_hub_Latam.md"
-}
-```
+| Módulo | Método del SDK |
+| --- | --- |
+| Credentials & Registration | `getVersions()`, `getDetails()`, `registerCredentials()`, `renewCredentials()`, `terminateCredentials()` |
+| Locations | `getLocations()`, `getLocation()`, `putLocation()`, `patchLocation()` |
+| Tariffs | `getTariffs()`, `getTariff()`, `putTariff()`, `deleteTariff()` |
+| Hub Client Info | `listHubClientInfo()`, `getHubClientInfo()` |
+| Sessions | `getSessions()`, `getSession()`, `putSession()`, `patchSession()` |
+| CDRs | `getCdrs()`, `getCdr()`, `postCdr()` |
+| Tokens & Authorisation | `getTokens()`, `getToken()`, `putToken()`, `patchToken()`, `deleteToken()`, `authorizeToken()` |
+| Commands | `startSession()`, `reserveNow()`, `stopSession()`, `unlockConnector()`, `cancelReservation()`, `getCommand()` |
+| Charging Profiles | `getActiveChargingProfile()`, `setChargingProfile()`, `deleteChargingProfile()`, `getChargingProfile()` |
+| Invoice Reconciliation | `getInvoiceReconciliations()`, `getInvoiceReconciliation()`, `putInvoiceReconciliation()`, `deleteInvoiceReconciliation()` |
 
 Consultá `docs/Roaming_hub_Latam.md` y `components/ModuleAccordion.tsx` en
-el repositorio del Hub para el roadmap completo y el detalle de cada módulo.
+el repositorio del Hub para el detalle de cada módulo.
 
 ## Tests de integración
 

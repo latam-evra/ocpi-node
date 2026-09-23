@@ -19,20 +19,3 @@ export class OcpiError extends Error {
     this.httpStatus = httpStatus;
   }
 }
-
-/**
- * Error lanzado por los métodos "stub" de módulos aún no implementados
- * server-side en el Hub (ver roadmap en docs/Roaming_hub_Latam.md del
- * repositorio del Hub).
- */
-export class OcpiModuleNotAvailableError extends Error {
-  public readonly module: string;
-
-  constructor(module: string) {
-    super(
-      `El módulo ${module} aún no está disponible en el Hub — ver roadmap en docs/Roaming_hub_Latam.md`,
-    );
-    this.name = "OcpiModuleNotAvailableError";
-    this.module = module;
-  }
-}

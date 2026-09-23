@@ -5,6 +5,34 @@ Todos los cambios notables de este paquete se documentan en este archivo.
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y
 este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## 0.5.0
+
+- Charging Profiles implementado de verdad contra el Hub
+  (`getActiveChargingProfile()`, `setChargingProfile()`,
+  `deleteChargingProfile()`, `getChargingProfile()`). Reemplaza el
+  stub `setChargingProfile(sessionId, profile)` que lanzaba
+  `OcpiModuleNotAvailableError` — breaking change de firma. Al igual
+  que Commands, no es CRUD simétrico: 3 métodos tipados por acción
+  (GET/PUT/DELETE) sobre una sesión existente, más `getChargingProfile()`
+  cuyo GET vive en `/chargingprofiles/callback/{id}`.
+- Con Charging Profiles implementado, ya no queda ningún módulo en el
+  roadmap del Hub: se elimina `OcpiModuleNotAvailableError` de
+  `src/errors.ts` y `src/roadmap-types.ts`.
+
+## 0.4.0
+
+- Sessions, CDRs, Tokens & Authorisation, Commands e Invoice
+  Reconciliation implementados de verdad contra el Hub. Reemplazan los
+  stubs que lanzaban `OcpiModuleNotAvailableError` — breaking change de
+  firma en todos los métodos afectados.
+- Commands es el módulo más asimétrico: sin `sendCommand` genérico, 5
+  métodos tipados (uno por `command_type`) más `getCommand()`, cuyo GET
+  vive en `/commands/callback/{id}`, no en `/commands/{type}`.
+- Tokens gana `authorizeToken()` como método standalone, separado de su
+  CRUD.
+- CDRs es solo-POST (inmutable); Invoice Reconciliation es solo-PUT
+  (sin POST) — no confundir pese a la similitud superficial.
+
 ## 0.3.1
 
 - Fix: agrega `@types/node` como devDependency explícita. Faltaba
