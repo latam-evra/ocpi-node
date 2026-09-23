@@ -3,21 +3,19 @@
 Cliente Node.js/TypeScript para consumir el **Hub de roaming OCPI 2.3.0** de
 **LATAM EV Roaming Alliance** (latam-evra.org).
 
-> **Estado del paquete:** aún **no está publicado en npm**. Mientras tanto,
-> instalalo directamente desde este repositorio (ver [Instalación](#instalación)).
+> **Estado del paquete:** publicado en npm como
+> [`@latam-evra/ocpi-client`](https://www.npmjs.com/package/@latam-evra/ocpi-client).
 
 ## Instalación
-
-### Cuando esté publicado en npm
 
 ```bash
 npm install @latam-evra/ocpi-client
 ```
 
-### Mientras tanto (desde el repositorio)
+### Alternativas (desde el repositorio)
 
-Este SDK vive en `sdks/node/` dentro del monorepo del Hub. Podés instalarlo
-en otro proyecto de dos formas:
+Este SDK también vive en `sdks/node/` dentro del monorepo del Hub. Podés
+instalarlo en otro proyecto de estas otras formas:
 
 **Opción A — referencia directa a la carpeta (para desarrollo/pruebas):**
 
