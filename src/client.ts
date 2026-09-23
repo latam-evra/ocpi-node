@@ -7,20 +7,29 @@ import type {
   OcpiVersionDetails,
   OcpiVersionEntry,
 } from "./types.js";
-import type {
-  OcpiCdr,
-  OcpiChargingProfile,
-  OcpiCommandName,
-  OcpiInvoiceReconciliation,
-  OcpiSession,
-  OcpiToken,
-} from "./roadmap-types.js";
+import type { OcpiChargingProfile } from "./roadmap-types.js";
 import type {
   OcpiLocation,
   OcpiLocationInput,
 } from "./locations.js";
 import type { OcpiTariff, OcpiTariffInput } from "./tariffs.js";
 import type { OcpiHubClientInfoEntry } from "./hubClientInfo.js";
+import type { OcpiSession, OcpiSessionInput } from "./sessions.js";
+import type { OcpiCdr, OcpiCdrInput } from "./cdrs.js";
+import type { OcpiToken, OcpiTokenInput, OcpiAuthorizeResult } from "./tokens.js";
+import type {
+  OcpiStartSessionCommand,
+  OcpiReserveNowCommand,
+  OcpiStopSessionCommand,
+  OcpiUnlockConnectorCommand,
+  OcpiCancelReservationCommand,
+  OcpiCommandAck,
+  OcpiCommand,
+} from "./commands.js";
+import type {
+  OcpiInvoiceReconciliation,
+  OcpiInvoiceReconciliationInput,
+} from "./invoiceReconciliation.js";
 
 export interface OcpiHubClientOptions {
   /**
@@ -39,11 +48,10 @@ export interface OcpiHubClientOptions {
  * Cliente Node.js/TypeScript del Hub de roaming OCPI 2.3.0 de
  * LATAM EV Roaming Alliance.
  *
- * Hoy los módulos Credentials & Registration, Locations, Tariffs y Hub
- * Client Info están implementados server-side en el Hub; el resto de los
- * métodos (Sessions, CDRs, Tokens, Commands, Charging Profiles,
- * Invoice Reconciliation) son stubs tipados que lanzan
- * `OcpiModuleNotAvailableError` hasta que el backend correspondiente exista.
+ * Implementa de verdad Credentials & Registration, Locations, Tariffs, Hub
+ * Client Info, Sessions, CDRs, Tokens & Authorisation, Commands e Invoice
+ * Reconciliation. Solo Charging Profiles queda como stub tipado que lanza
+ * `OcpiModuleNotAvailableError` — no está en el roadmap del Hub.
  */
 export class OcpiHubClient {
   private readonly baseUrl: string;
@@ -283,32 +291,302 @@ export class OcpiHubClient {
   }
 
   // -------------------------------------------------------------------
-  // Stubs tipados — módulos en roadmap, aún no implementados en el Hub.
-  // Ver docs/Roaming_hub_Latam.md y components/ModuleAccordion.tsx en el
-  // repositorio del Hub.
+  // Sessions (implementado en el Hub)
   // -------------------------------------------------------------------
 
-  /** Roadmap: módulo Sessions. */
-  async getActiveSession(_sessionId: string): Promise<OcpiSession> {
-    throw new OcpiModuleNotAvailableError("Sessions");
+  async getSessions(
+    tokenB: string,
+    offset = 0,
+    limit = 50,
+  ): Promise<{ sessions: OcpiSession[]; total: number }> {
+    const res = await this.request<OcpiSession[]>(
+      `/sessions?offset=${offset}&limit=${limit}`,
+      { method: "GET", headers: { authorization: `Token ${tokenB}` } },
+    );
+    return { sessions: res.data, total: res.data.length };
   }
 
-  /** Roadmap: módulo CDRs. */
-  async getCdr(_cdrId: string): Promise<OcpiCdr> {
-    throw new OcpiModuleNotAvailableError("CDRs");
+  async getSession(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    sessionId: string,
+  ): Promise<OcpiSession> {
+    const res = await this.request<OcpiSession>(
+      `/sessions/${countryCode}/${partyId}/${sessionId}`,
+      { method: "GET", headers: { authorization: `Token ${tokenB}` } },
+    );
+    return res.data;
   }
 
-  /** Roadmap: módulo Tokens & Authorisation. */
-  async authorizeToken(_tokenUid: string): Promise<OcpiToken> {
-    throw new OcpiModuleNotAvailableError("Tokens & Authorisation");
+  async putSession(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    sessionId: string,
+    body: OcpiSessionInput,
+  ): Promise<OcpiSession> {
+    const res = await this.request<OcpiSession>(
+      `/sessions/${countryCode}/${partyId}/${sessionId}`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Token ${tokenB}`,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    return res.data;
   }
 
-  /** Roadmap: módulo Commands. */
-  async sendCommand(
-    _command: OcpiCommandName,
-    _payload: unknown,
+  async patchSession(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    sessionId: string,
+    body: Partial<OcpiSessionInput>,
+  ): Promise<OcpiSession> {
+    const res = await this.request<OcpiSession>(
+      `/sessions/${countryCode}/${partyId}/${sessionId}`,
+      {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Token ${tokenB}`,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    return res.data;
+  }
+
+  // -------------------------------------------------------------------
+  // CDRs (implementado en el Hub) — inmutables, sin PUT/PATCH/DELETE.
+  // -------------------------------------------------------------------
+
+  async getCdrs(
+    tokenB: string,
+    offset = 0,
+    limit = 50,
+  ): Promise<{ cdrs: OcpiCdr[]; total: number }> {
+    const res = await this.request<OcpiCdr[]>(
+      `/cdrs?offset=${offset}&limit=${limit}`,
+      { method: "GET", headers: { authorization: `Token ${tokenB}` } },
+    );
+    return { cdrs: res.data, total: res.data.length };
+  }
+
+  async getCdr(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    cdrId: string,
+  ): Promise<OcpiCdr> {
+    const res = await this.request<OcpiCdr>(
+      `/cdrs/${countryCode}/${partyId}/${cdrId}`,
+      { method: "GET", headers: { authorization: `Token ${tokenB}` } },
+    );
+    return res.data;
+  }
+
+  async postCdr(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    cdrId: string,
+    body: OcpiCdrInput,
+  ): Promise<OcpiCdr> {
+    const res = await this.request<OcpiCdr>(
+      `/cdrs/${countryCode}/${partyId}/${cdrId}`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Token ${tokenB}`,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    return res.data;
+  }
+
+  // -------------------------------------------------------------------
+  // Tokens & Authorisation (implementado en el Hub)
+  // -------------------------------------------------------------------
+
+  async getTokens(
+    tokenB: string,
+    offset = 0,
+    limit = 50,
+  ): Promise<{ tokens: OcpiToken[]; total: number }> {
+    const res = await this.request<OcpiToken[]>(
+      `/tokens?offset=${offset}&limit=${limit}`,
+      { method: "GET", headers: { authorization: `Token ${tokenB}` } },
+    );
+    return { tokens: res.data, total: res.data.length };
+  }
+
+  async getToken(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    uid: string,
+  ): Promise<OcpiToken> {
+    const res = await this.request<OcpiToken>(
+      `/tokens/${countryCode}/${partyId}/${uid}`,
+      { method: "GET", headers: { authorization: `Token ${tokenB}` } },
+    );
+    return res.data;
+  }
+
+  async putToken(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    uid: string,
+    body: OcpiTokenInput,
+  ): Promise<OcpiToken> {
+    const res = await this.request<OcpiToken>(
+      `/tokens/${countryCode}/${partyId}/${uid}`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Token ${tokenB}`,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    return res.data;
+  }
+
+  async patchToken(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    uid: string,
+    body: Partial<OcpiTokenInput>,
+  ): Promise<OcpiToken> {
+    const res = await this.request<OcpiToken>(
+      `/tokens/${countryCode}/${partyId}/${uid}`,
+      {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Token ${tokenB}`,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    return res.data;
+  }
+
+  async deleteToken(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    uid: string,
   ): Promise<void> {
-    throw new OcpiModuleNotAvailableError("Commands & Charging Profiles");
+    await this.request<Record<string, never>>(
+      `/tokens/${countryCode}/${partyId}/${uid}`,
+      { method: "DELETE", headers: { authorization: `Token ${tokenB}` } },
+    );
+  }
+
+  /**
+   * .../authorize — endpoint especial, no forma parte del CRUD de tokens.
+   * Nunca propaga un error de negocio: el Hub siempre resuelve a
+   * `{allowed: "..."}`, incluso ante fallos internos (token inexistente,
+   * eMSP desconectado, timeout).
+   */
+  async authorizeToken(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    uid: string,
+    locationReferences?: unknown,
+  ): Promise<OcpiAuthorizeResult> {
+    const res = await this.request<OcpiAuthorizeResult>(
+      `/tokens/${countryCode}/${partyId}/${uid}/authorize`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Token ${tokenB}`,
+        },
+        body: JSON.stringify(locationReferences ?? {}),
+      },
+    );
+    return res.data;
+  }
+
+  // -------------------------------------------------------------------
+  // Commands (implementado en el Hub) — no es CRUD: 5 métodos tipados
+  // para enviar cada tipo de comando más getCommand(), cuyo GET vive en
+  // /commands/callback/{command_id} (no en /commands/{command_type}).
+  // `response_url` no lo genera el SDK: el llamador (un eMSP externo)
+  // debe pasar su propio callback público, se forwardea tal cual.
+  // -------------------------------------------------------------------
+
+  async startSession(
+    tokenB: string,
+    body: OcpiStartSessionCommand,
+  ): Promise<OcpiCommandAck> {
+    return this.sendCommandRequest(tokenB, "START_SESSION", body);
+  }
+
+  async reserveNow(
+    tokenB: string,
+    body: OcpiReserveNowCommand,
+  ): Promise<OcpiCommandAck> {
+    return this.sendCommandRequest(tokenB, "RESERVE_NOW", body);
+  }
+
+  async stopSession(
+    tokenB: string,
+    body: OcpiStopSessionCommand,
+  ): Promise<OcpiCommandAck> {
+    return this.sendCommandRequest(tokenB, "STOP_SESSION", body);
+  }
+
+  async unlockConnector(
+    tokenB: string,
+    body: OcpiUnlockConnectorCommand,
+  ): Promise<OcpiCommandAck> {
+    return this.sendCommandRequest(tokenB, "UNLOCK_CONNECTOR", body);
+  }
+
+  async cancelReservation(
+    tokenB: string,
+    body: OcpiCancelReservationCommand,
+  ): Promise<OcpiCommandAck> {
+    return this.sendCommandRequest(tokenB, "CANCEL_RESERVATION", body);
+  }
+
+  private async sendCommandRequest(
+    tokenB: string,
+    commandType: string,
+    body: unknown,
+  ): Promise<OcpiCommandAck> {
+    const res = await this.request<OcpiCommandAck>(`/commands/${commandType}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Token ${tokenB}`,
+      },
+      body: JSON.stringify(body),
+    });
+    return res.data;
+  }
+
+  /** GET /commands/callback/{command_id} — estado actual del comando. */
+  async getCommand(tokenB: string, commandId: string): Promise<OcpiCommand> {
+    const res = await this.request<OcpiCommand>(
+      `/commands/callback/${commandId}`,
+      { method: "GET", headers: { authorization: `Token ${tokenB}` } },
+    );
+    return res.data;
   }
 
   /** Roadmap: módulo Charging Profiles. */
@@ -347,10 +625,66 @@ export class OcpiHubClient {
     return res.data;
   }
 
-  /** Roadmap: módulo Invoice Reconciliation. */
+  // -------------------------------------------------------------------
+  // Invoice Reconciliation (implementado en el Hub) — solo PUT (upsert),
+  // sin POST, a diferencia de CDRs que es POST-only.
+  // -------------------------------------------------------------------
+
+  async getInvoiceReconciliations(
+    tokenB: string,
+    offset = 0,
+    limit = 50,
+  ): Promise<{ reconciliations: OcpiInvoiceReconciliation[]; total: number }> {
+    const res = await this.request<OcpiInvoiceReconciliation[]>(
+      `/invoicereconciliations?offset=${offset}&limit=${limit}`,
+      { method: "GET", headers: { authorization: `Token ${tokenB}` } },
+    );
+    return { reconciliations: res.data, total: res.data.length };
+  }
+
   async getInvoiceReconciliation(
-    _cdrId: string,
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    reconciliationId: string,
   ): Promise<OcpiInvoiceReconciliation> {
-    throw new OcpiModuleNotAvailableError("Invoice Reconciliation");
+    const res = await this.request<OcpiInvoiceReconciliation>(
+      `/invoicereconciliations/${countryCode}/${partyId}/${reconciliationId}`,
+      { method: "GET", headers: { authorization: `Token ${tokenB}` } },
+    );
+    return res.data;
+  }
+
+  async putInvoiceReconciliation(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    reconciliationId: string,
+    body: OcpiInvoiceReconciliationInput,
+  ): Promise<OcpiInvoiceReconciliation> {
+    const res = await this.request<OcpiInvoiceReconciliation>(
+      `/invoicereconciliations/${countryCode}/${partyId}/${reconciliationId}`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Token ${tokenB}`,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+    return res.data;
+  }
+
+  async deleteInvoiceReconciliation(
+    tokenB: string,
+    countryCode: string,
+    partyId: string,
+    reconciliationId: string,
+  ): Promise<void> {
+    await this.request<Record<string, never>>(
+      `/invoicereconciliations/${countryCode}/${partyId}/${reconciliationId}`,
+      { method: "DELETE", headers: { authorization: `Token ${tokenB}` } },
+    );
   }
 }
